@@ -2,7 +2,7 @@ library(fpp3)
 library(zoo)
 library(tsibbledata)
 
-nino <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Spring 2025/ML-Giant-Kelp-Predtiction/Datasets/Macrocystis pyrifera biomass and environmental drivers/climind_quarterly.csv")
+nino <- read.csv("http://raw.githubusercontent.com/willrmull/ML-Giant-Kelp-Prediction/refs/heads/main/Datasets/climind_quarterly.csv")
 nino <- nino %>% mutate(date = paste(year, quarter))
 nino$date <- as.yearqtr(nino$date, "%Y%q")
 nino <- nino %>% select(-c(year, quarter))
@@ -36,7 +36,7 @@ subfull <- d |>
   aggregate_key(Site, kelp = sum(kelp))
 
 model <- subfull |>
-  filter(year(date) <= 2017) |>
+  filter(year(date) <= 2018) |>
   model(NNETAR(kelp, 
                n_nodes = 5, 
                P = 4, 
@@ -50,7 +50,7 @@ fit <- model %>%
 
 fit %>% autoplot(subfull) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
-aggregate <- subfull %>% filter(is_aggregated(Site), year(date) > 2017)
+aggregate <- subfull %>% filter(is_aggregated(Site), year(date) > 2018)
 fit %>% autoplot(aggregate) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
 

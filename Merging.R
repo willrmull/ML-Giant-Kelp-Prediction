@@ -7,18 +7,18 @@ library(tcltk2)
 library(tidyverse)
 library(zoo)
 library(lubridate)
-library(geosphere)
 library(sf)
 library(data.table)
+library(readr)
 
 # Program reads in three datasets and combines them into one
 # Read in necessary files
 # loc: latatude and longitude information for sites
 # sst: sea surface temperature 
 # drivers: environmental drivers (waves, no3, and biomass)
-loc <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Spring 2025/Data Files/Env Data Drivers/locations (2).csv")
-sst <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Spring 2025/Data Files/Other Env Drivers/SST_update2023.csv")
-drivers <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Spring 2025/Data Files/Env Data Drivers/kelp_no3_waves_quarterly_long (2).csv", header=TRUE)
+loc <- read_csv("https://raw.githubusercontent.com/willrmull/ML-Giant-Kelp-Prediction/refs/heads/main/Datasets/SiteKey.csv")
+sst <- read.csv("https://raw.githubusercontent.com/willrmull/ML-Giant-Kelp-Prediction/refs/heads/main/Datasets/SST_update2023.csv")
+drivers <- read.csv('https://raw.githubusercontent.com/willrmull/ML-Giant-Kelp-Prediction/refs/heads/main/Datasets/SST_update2023.csv', header=TRUE)
 
 #Assigning coordinates to the dataset of biomass and environmental drivers
 drivers <- merge(drivers, loc, by=c("site_id"))
