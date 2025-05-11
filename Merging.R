@@ -11,7 +11,7 @@ library(geosphere)
 library(sf)
 library(data.table)
 
-# Program reads in three datasets and combines them into one useable dataset
+# Program reads in three datasets and combines them into one
 # Read in necessary files
 # loc: latatude and longitude information for sites
 # sst: sea surface temperature 
@@ -53,6 +53,7 @@ complete_rows <- complete.cases(drivers)
 # Selecting only complete rows for analysis
 drivers <- drivers[complete_rows, ]
 
+#Converting latitude and longitude to coordinates
 df1 <- sst %>%
   st_as_sf(coords = c("longitude", "latitude"), remove = FALSE) %>%
   st_set_crs(2193)
@@ -63,15 +64,15 @@ df2 <- drivers %>%
   st_as_sf(coords = c("lon", "lat"), remove = FALSE) %>%
   st_set_crs(2193)
 
+#Merging the datasets based on nearest corrdnates
 res <- do.call('rbind', lapply(split(df2, 1:nrow(df2)), function(x) {
   st_join(x, df1[df1$date == unique(x$date),], join = st_nearest_feature)
 }))
 
+#Selecting Nnecessary rows
 df_final <- select(res, c("kelp", "no3", "waves", "temp", "date.x"))
 df_final <- df_final %>% drop_na()
 
-
-###Organizing ans###
 #Creating year and date collumns
 df_final$date.x <- as.yearqtr(df_final$date.x)
 names(df_final)[names(df_final) == 'date.x'] <- 'date'

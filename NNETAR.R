@@ -7,66 +7,51 @@ nino <- nino %>% mutate(date = paste(year, quarter))
 nino$date <- as.yearqtr(nino$date, "%Y%q")
 nino <- nino %>% select(-c(year, quarter))
 
-#import main dataset
-df_final_sites <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Spring 2025/ML-Giant-Kelp-Predtiction/df_final_sites.csv")
+nino_merged <- merge(nino, final_dataset, by=c("date"))
 
-site_final <- df_final_sites %>% group_by(date, Site) %>%
-  reframe(temp = mean(temp),
-          kelp = sum(kelp),
-          no3 = mean(no3), 
-          waves = mean(waves)) %>%
-  ungroup()
+nino_merged <- nino_merged %>% filter(date < 2020)
+nino_merged <- na.omit(d)
 
-nino_merged <- merge(nino, site_final, by=c("date"))
+nino_merged$Site <- as.numeric(as.factor(nino_merged$Site))
 
-d <- nino_merged %>% filter(date < 2020)
-d <- na.omit(d)
-
-d$Site <- as.numeric(as.factor(d$Site))
-
-d$date <- yearquarter(d$date)
-d <- d %>% relocate(date, Site, kelp)
-d <- as_tsibble(d, key = Site, index = date,  validate = TRUE, .drop = TRUE,)
+nino_merged$date <- yearquarter(nino_merged$date)
+nino_merged <- nino_merged %>% relocate(date, Site, kelp)
+nino_merged <- as_tsibble(nino_merged, key = Site, index = date,  validate = TRUE, .drop = TRUE,)
 
 #########Making Heirachical tsibble
 
-d_reg <- d %>% filter(year(date) <= 2018)
+nino_merged_reg <- nino_merged %>% filter(year(date) <= 2018)
 
 #Xreg variables
-xreg <- cbind(sst = d_reg[, "temp"],
-              no3 = d_reg[, "no3"],
-              waves = d_reg[, "waves"],
-              date = d_reg[, "date"],
-              NPGO = d_reg[, "NPGO"],
-              MEI = d_reg[, "MEI"],
-              PDO = d_reg[, "PDO"],
-              date = d_reg[, "date"])
+xreg <- cbind(sst = nino_merged_reg[, "temp"],
+              no3 = nino_merged_reg[, "no3"],
+              waves = nino_merged_reg[, "waves"],
+              date = nino_merged_reg[, "date"],
+              NPGO = nino_merged_reg[, "NPGO"],
+              MEI = nino_merged_reg[, "MEI"],
+              PDO = nino_merged_reg[, "PDO"],
+              date = nino_merged_reg[, "date"])
 
 subfull <- d |>
   aggregate_key(Site, kelp = sum(kelp))
 
-fit <- subfull |>
+model <- subfull |>
   filter(year(date) <= 2017) |>
-  model(NNETAR(kelp, n_nodes = 10, P = 4, n_networks = 100, scale_inputs = TRUE, xreg = as.matrix(xreg)))
+  model(NNETAR(kelp, 
+               n_nodes = 5, 
+               P = 4, 
+               n_networks = 100, 
+               scale_inputs = TRUE, 
+               xreg = as.matrix(xreg)))
 
-fit <- subfull |>
-  filter(year(date) <= 2017) |>
-  model(NNETAR(kelp, n_nodes = 10, p = NULL, P = 4, period=4, xreg = as.matrix(xreg)))
-
-
-fit %>% 
+fit <- model %>% 
   filter(is_aggregated(Site)) %>%
-  forecast(h = 4) %>%
-  autoplot(subfull) %>%
-  fitted()
+  forecast(h = 4)
 
-fit_val <- fit %>% 
-  filter(is_aggregated(Site)) %>%
-  forecast(h = 4) 
+fit %>% autoplot(subfull) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
-#Calculate accuracy
-result <- fit_val %>%
-  accuracy(subfull, by=c("date", ".model"))
+aggregate <- subfull %>% filter(is_aggregated(Site), year(date) > 2017)
+fit %>% autoplot(aggregate) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
-fitted(fitted)
-fitted
+
+results <- fit %>% accuracy(subfull, by=c('date', '.model'))
