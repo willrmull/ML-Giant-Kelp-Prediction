@@ -37,10 +37,13 @@ xreg <- cbind(sst = nino_merged_reg[, "temp"],
               PDO = nino_merged_reg[, "PDO"],
               date = nino_merged_reg[, "date"])
 
-# Aggregating 
-subfull <- d |>
+
+# Grouping the data based on the site where measurements were taken.  
+# This allows for graphs for each site to be shown simultaneously
+subfull <- nino_merged |>
   aggregate_key(Site, kelp = sum(kelp))
 
+# Initallzing model
 model <- subfull |>
   filter(year(date) <= 2018) |>
   model(NNETAR(kelp, 
@@ -50,15 +53,19 @@ model <- subfull |>
                scale_inputs = TRUE, 
                xreg = as.matrix(xreg)))
 
+# Forecasting four quarters into the future using the model above
+# This forecast uses aggregated site data
 fit <- model %>% 
   filter(is_aggregated(Site)) %>%
   forecast(h = 4)
 
+# Plotting the above forecast  
 fit %>% autoplot(subfull) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
 
 aggregate <- subfull %>% filter(is_aggregated(Site), year(date) > 2018)
 fit %>% autoplot(aggregate) + labs(x = "Date (Year-Quarter)", y = "Kelp Biomass (kg)", title = "Kelp Biomass")
 
-
+# Reporting summary statistics
 results <- fit %>% accuracy(subfull, by=c('date', '.model'))
+results
